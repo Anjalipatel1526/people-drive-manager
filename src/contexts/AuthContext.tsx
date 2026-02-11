@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   roles: [],
   loading: true,
-  signOut: async () => {},
+  signOut: async () => { },
   hasRole: () => false,
 });
 
@@ -40,6 +40,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Check for hardcoded HR session first
+    const isHrAuth = localStorage.getItem("hr_auth") === "true";
+
+    if (isHrAuth) {
+      const mockUser = {
+        id: "hr-admin-id",
+        email: "komallarna06@gmail.com",
+        role: "authenticated",
+        app_metadata: {},
+        user_metadata: { full_name: "HR Admin" },
+        aud: "authenticated",
+        created_at: new Date().toISOString(),
+      } as User;
+
+      const mockSession = {
+        access_token: "mock-token",
+        refresh_token: "mock-refresh-token",
+        expires_in: 3600,
+        token_type: "bearer",
+        user: mockUser,
+      } as Session;
+
+      setSession(mockSession);
+      setUser(mockUser);
+      setRoles(["admin"]); // Mock admin role
+      setLoading(false);
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
@@ -66,7 +95,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
+    localStorage.removeItem("hr_auth");
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setRoles([]);
   };
 
   const hasRole = (role: AppRole) => roles.includes(role);
