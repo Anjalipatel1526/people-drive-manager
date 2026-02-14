@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, FileText, Upload, X } from "lucide-react";
-import { Constants } from "@/integrations/supabase/types";
-import type { Database } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { googleSheets } from "@/lib/googleSheets";
 
-type Department = Database["public"]["Enums"]["department"];
-
-const DEPARTMENTS = Constants.public.Enums.department;
+// Hardcode departments since we removed Supabase
+const DEPARTMENTS = ["HR", "Tech", "Finance", "Marketing", "Operations"];
 
 const DOCUMENT_TYPES = [
   { key: "photo", label: "Photo", accept: "image/jpeg,image/png" },
@@ -26,10 +24,13 @@ const DOCUMENT_TYPES = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const CandidateForm = () => {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const { user } = useAuth();
+  // Pre-fill from user context if available
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
+  const [email, setEmail] = useState(user?.email || "");
+
   const [phone, setPhone] = useState("");
-  const [department, setDepartment] = useState<Department | "">("");
+  const [department, setDepartment] = useState("");
   const [address, setAddress] = useState("");
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [loading, setLoading] = useState(false);
@@ -44,59 +45,62 @@ const CandidateForm = () => {
     setFiles((prev) => ({ ...prev, [key]: file }));
   };
 
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        // remove data:image/png;base64, prefix
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast({ title: "Please sign in", description: "You must be signed in to submit.", variant: "destructive" });
+      return;
+    }
+
     if (!department) {
       toast({ title: "Department required", description: "Please select a department", variant: "destructive" });
       return;
     }
 
-    const requiredFiles = DOCUMENT_TYPES.filter((d) => d.key !== "photo");
-    for (const doc of requiredFiles) {
-      if (!files[doc.key]) {
-        toast({ title: `${doc.label} required`, description: `Please upload your ${doc.label}`, variant: "destructive" });
-        return;
-      }
-    }
-
     setLoading(true);
     try {
-      // Insert candidate
-      const { data: candidate, error: candidateError } = await supabase
-        .from("candidates")
-        .insert({ full_name: fullName, email, phone, department: department as Department, address: address || null })
-        .select()
-        .single();
+      // 1. Prepare Data
+      const candidateData = {
+        fullName,
+        email,
+        phone,
+        department,
+        address
+      };
 
-      if (candidateError) throw candidateError;
-
-      // Upload files
-      const sanitizedName = fullName.replace(/[^a-zA-Z0-9]/g, "_");
-      for (const doc of DOCUMENT_TYPES) {
-        const file = files[doc.key];
-        if (!file) continue;
-
-        const ext = file.name.split(".").pop();
-        const storagePath = `${department}/${sanitizedName}/${doc.key}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("candidate-documents")
-          .upload(storagePath, file, { upsert: true });
-
-        if (uploadError) throw uploadError;
-
-        const { error: docError } = await supabase.from("candidate_documents").insert({
-          candidate_id: candidate.id,
-          document_type: doc.key,
-          file_name: file.name,
-          storage_path: storagePath,
-          file_size: file.size,
-        });
-
-        if (docError) throw docError;
+      // 2. Prepare Files
+      const fileData: Record<string, any> = {};
+      for (const [key, file] of Object.entries(files)) {
+        if (file) {
+          const base64 = await convertFileToBase64(file);
+          fileData[key] = {
+            name: file.name,
+            type: file.type,
+            base64: base64
+          };
+        }
       }
 
+      // 3. Submit to Google Sheets
+      await googleSheets.submitCandidateDocuments(candidateData, fileData);
+
       setSubmitted(true);
+      toast({ title: "Success", description: "Information submitted successfully." });
     } catch (err: any) {
       toast({ title: "Submission failed", description: err.message, variant: "destructive" });
     } finally {
@@ -111,7 +115,8 @@ const CandidateForm = () => {
           <CardContent className="pt-10 pb-10 space-y-4">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
             <h2 className="text-2xl font-bold text-foreground">Submission Successful!</h2>
-            <p className="text-muted-foreground">Your documents have been submitted. HR will review them shortly.</p>
+            <p className="text-muted-foreground">Your documents have been submitted to Google Sheets.</p>
+            <Button onClick={() => setSubmitted(false)} variant="outline">Submit Another Response</Button>
           </CardContent>
         </Card>
       </div>
@@ -126,7 +131,7 @@ const CandidateForm = () => {
             <FileText className="h-7 w-7" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">Document Submission</h1>
-          <p className="mt-2 text-muted-foreground">Submit your documents for HR verification</p>
+          <p className="mt-2 text-muted-foreground">Submit your documents via Google Sheets</p>
         </div>
 
         <Card className="shadow-lg">
@@ -154,7 +159,7 @@ const CandidateForm = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Department *</Label>
-                  <Select value={department} onValueChange={(v) => setDepartment(v as Department)}>
+                  <Select value={department} onValueChange={(v) => setDepartment(v)}>
                     <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                     <SelectContent>
                       {DEPARTMENTS.map((d) => (

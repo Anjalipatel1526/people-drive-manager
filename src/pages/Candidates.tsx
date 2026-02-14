@@ -1,42 +1,31 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Constants } from "@/integrations/supabase/types";
-import type { Database } from "@/integrations/supabase/types";
 import { Download, Eye, Search, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-type Candidate = Database["public"]["Tables"]["candidates"]["Row"];
-type CandidateDoc = Database["public"]["Tables"]["candidate_documents"]["Row"];
-type Department = Database["public"]["Enums"]["department"];
-
-const DEPARTMENTS = Constants.public.Enums.department;
+const DEPARTMENTS = ["HR", "Tech", "Finance", "Marketing", "Operations"];
 
 interface CandidatesPageProps {
   filterStatus?: "Pending" | "Verified";
-  filterDepartment?: Department;
+  filterDepartment?: string;
 }
 
 const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<string>(filterDepartment || "all");
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
-  const [candidateDocs, setCandidateDocs] = useState<CandidateDoc[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const { toast } = useToast();
 
   const fetchCandidates = async () => {
-    let query = supabase.from("candidates").select("*").order("created_at", { ascending: false });
-    if (filterStatus) query = query.eq("status", filterStatus);
-    if (filterDepartment) query = query.eq("department", filterDepartment);
-    const { data } = await query;
-    setCandidates(data || []);
+    // Mock fetch
+    setCandidates([]);
     setLoading(false);
   };
 
@@ -48,47 +37,8 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
     return matchesSearch && matchesDept;
   });
 
-  const updateStatus = async (id: string, status: "Pending" | "Verified") => {
-    const { error } = await supabase.from("candidates").update({ status }).eq("id", id);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Status updated" });
-      fetchCandidates();
-    }
-  };
-
-  const deleteCandidate = async (id: string) => {
-    const { error } = await supabase.from("candidates").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Candidate deleted" });
-      fetchCandidates();
-    }
-  };
-
-  const viewDetails = async (candidate: Candidate) => {
-    setSelectedCandidate(candidate);
-    const { data } = await supabase.from("candidate_documents").select("*").eq("candidate_id", candidate.id);
-    setCandidateDocs(data || []);
-  };
-
-  const downloadDoc = async (doc: CandidateDoc) => {
-    const { data } = await supabase.storage.from("candidate-documents").createSignedUrl(doc.storage_path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  };
-
   const exportCSV = () => {
-    const headers = "Name,Email,Phone,Department,Status,Date\n";
-    const rows = filtered.map((c) => `"${c.full_name}","${c.email}","${c.phone}","${c.department}","${c.status}","${new Date(c.created_at).toLocaleDateString()}"`).join("\n");
-    const blob = new Blob([headers + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "candidates.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    toast({ title: "Not Available", description: "Export from Google Sheets directly.", variant: "default" });
   };
 
   const title = filterStatus ? `${filterStatus} Candidates` : filterDepartment ? `${filterDepartment} Department` : "All Candidates";
@@ -137,7 +87,9 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No candidates found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Data viewing disabled. Please check Google Sheets.
+                </TableCell></TableRow>
               ) : (
                 filtered.map((c) => (
                   <TableRow key={c.id}>
@@ -146,18 +98,10 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                     <TableCell className="hidden md:table-cell">{c.phone}</TableCell>
                     <TableCell><span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c.department}</span></TableCell>
                     <TableCell>
-                      <button
-                        onClick={() => updateStatus(c.id, c.status === "Pending" ? "Verified" : "Pending")}
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-colors ${c.status === "Verified" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"}`}
-                      >
-                        {c.status}
-                      </button>
+                      {c.status}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => viewDetails(c)}><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteCandidate(c.id)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
+                      Actions disabled
                     </TableCell>
                   </TableRow>
                 ))
@@ -166,44 +110,6 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
           </Table>
         </CardContent>
       </Card>
-
-      {/* Candidate detail dialog */}
-      <Dialog open={!!selectedCandidate} onOpenChange={() => setSelectedCandidate(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{selectedCandidate?.full_name}</DialogTitle></DialogHeader>
-          {selectedCandidate && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="text-muted-foreground">Email:</span> {selectedCandidate.email}</div>
-                <div><span className="text-muted-foreground">Phone:</span> {selectedCandidate.phone}</div>
-                <div><span className="text-muted-foreground">Department:</span> {selectedCandidate.department}</div>
-                <div><span className="text-muted-foreground">Status:</span> {selectedCandidate.status}</div>
-                {selectedCandidate.address && <div className="col-span-2"><span className="text-muted-foreground">Address:</span> {selectedCandidate.address}</div>}
-              </div>
-              <div>
-                <h4 className="mb-2 font-semibold">Documents</h4>
-                {candidateDocs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No documents uploaded</p>
-                ) : (
-                  <div className="space-y-2">
-                    {candidateDocs.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between rounded-lg border border-border p-2">
-                        <div>
-                          <p className="text-sm font-medium capitalize">{doc.document_type}</p>
-                          <p className="text-xs text-muted-foreground">{doc.file_name}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => downloadDoc(doc)}>
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

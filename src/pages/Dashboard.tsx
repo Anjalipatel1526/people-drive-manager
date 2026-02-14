@@ -1,23 +1,19 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Clock, CheckCircle, Building2 } from "lucide-react";
-import { Constants } from "@/integrations/supabase/types";
-import type { Database } from "@/integrations/supabase/types";
 
-type Candidate = Database["public"]["Tables"]["candidates"]["Row"];
-
-const DEPARTMENTS = Constants.public.Enums.department;
+// Hardcoded since Supabase is removed
+const DEPARTMENTS = ["HR", "Tech", "Finance", "Marketing", "Operations"];
 
 const Dashboard = () => {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidates, setCandidates] = useState<any[]>([]); // Mock data type
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("candidates").select("*").order("created_at", { ascending: false }).then(({ data }) => {
-      setCandidates(data || []);
-      setLoading(false);
-    });
+    // Mock data fetching since we moved to Google Sheets and don't have read API setup yet
+    // In a real scenario, we might fetch from the Sheet CSV publish link
+    setCandidates([]);
+    setLoading(false);
   }, []);
 
   const total = candidates.length;
@@ -79,7 +75,10 @@ const Dashboard = () => {
         <CardHeader><CardTitle>Recent Submissions</CardTitle></CardHeader>
         <CardContent>
           {recent.length === 0 ? (
-            <p className="text-muted-foreground">No candidates yet.</p>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Data viewing is currently disabled.</p>
+              <p className="text-xs text-muted-foreground mt-1">Check Google Sheets for submissions.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {recent.map((c) => (

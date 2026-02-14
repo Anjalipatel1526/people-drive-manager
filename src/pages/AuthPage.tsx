@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, UserPlus, LogIn, User } from "lucide-react";
+import { FileText, UserPlus, LogIn } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { googleSheets } from "@/lib/googleSheets";
 
 const AuthPage = () => {
     const [activeTab, setActiveTab] = useState("candidate");
     const [candidateMode, setCandidateMode] = useState<"login" | "signup">("signup");
+    const { signIn } = useAuth();
 
     // Form States
     const [email, setEmail] = useState("");
@@ -34,29 +36,35 @@ const AuthPage = () => {
 
         try {
             if (candidateMode === "signup") {
-                const { error } = await supabase.auth.signUp({
+                // Submit to Google Sheets
+                await googleSheets.submitCandidate({
+                    fullName,
                     email,
-                    password,
-                    options: {
-                        emailRedirectTo: window.location.origin,
-                        data: { full_name: fullName, role: 'candidate' },
-                    },
+                    role: 'candidate'
                 });
-                if (error) throw error;
-                toast({ title: "Account created!", description: "Please check your email to verify your account." });
+
+                // Auto-login after signup
+                await signIn(email, "candidate", fullName);
+
+                toast({ title: "Account created!", description: "Welcome to the portal." });
+                navigate("/candidate-form");
             } else {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) throw error;
+                // Simplified "Login" for now 
+                // Since we don't have a backend to verify password against, 
+                // we'll just allow entry if email is present (simulated).
+                // In a real Google Sheet app, we'd need to fetch the sheet data to verify, 
+                // but that requires exposing all user emails to the client or a proxy.
+                // For this request, we assume "Enter Email to Resume" is sufficient for the demo.
+
+                await signIn(email, "candidate");
                 navigate("/candidate-form");
             }
         } catch (error: any) {
-            toast({ title: "Authentication failed", description: error.message, variant: "destructive" });
+            toast({ title: "Authentication failed", description: error.message || "Failed to connect", variant: "destructive" });
         } finally {
             setLoading(false);
         }
     };
-
-
 
     const handleHRLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,27 +72,14 @@ const AuthPage = () => {
 
         const normalizedEmail = email.toLowerCase();
 
+        // Hardcoded HR Check
         if (normalizedEmail === "komallarna06@gmail.com" && password === "anju@1526") {
-            localStorage.setItem("hr_auth", "true");
-            // Force a reload to ensure AuthContext picks up the change if we rely on initial mount check, 
-            // but better to explicitly reload or have AuthContext listen to storage. 
-            // For now, let's just navigate and let AuthContext handle it if we modify it to check on mount.
-            // Actually, since we are SPA, simply setting localStorage won't trigger React state updates in AuthContext 
-            // unless we expose a login method or force a reload. 
-            // A simple window.location.href = "/dashboard" might be easiest to ensure state reset.
-            window.location.href = "/dashboard";
-            return;
-        }
-
-        try {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
+            await signIn(normalizedEmail, "hr", "HR Admin");
             navigate("/dashboard");
-        } catch (error: any) {
-            toast({ title: "Login failed", description: error.message, variant: "destructive" });
-        } finally {
-            setLoading(false);
+        } else {
+            toast({ title: "Login failed", description: "Invalid HR credentials", variant: "destructive" });
         }
+        setLoading(false);
     };
 
     return (
@@ -126,8 +121,6 @@ const AuthPage = () => {
                                 <Button type="submit" className="w-full" disabled={loading}>
                                     {loading ? "Processing..." : (candidateMode === "signup" ? <><UserPlus className="mr-2 h-4 w-4" /> Sign Up</> : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>)}
                                 </Button>
-
-
 
                                 <div className="text-sm text-center text-muted-foreground">
                                     {candidateMode === "signup" ? (

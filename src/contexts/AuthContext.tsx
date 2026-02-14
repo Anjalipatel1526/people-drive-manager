@@ -1,111 +1,92 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+// Simple User type since we removed Supabase types
+export interface User {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    full_name?: string;
+    role?: "candidate" | "hr";
+    [key: string]: any;
+  };
+}
 
 interface AuthContextType {
-  session: Session | null;
   user: User | null;
-  roles: AppRole[];
   loading: boolean;
+  signIn: (email: string, role: "candidate" | "hr", fullName?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  hasRole: (role: AppRole) => boolean;
+  isAuthenticated: boolean;
+  isHr: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  session: null,
   user: null,
-  roles: [],
   loading: true,
+  signIn: async () => { },
   signOut: async () => { },
-  hasRole: () => false,
+  isAuthenticated: false,
+  isHr: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchRoles = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    setRoles(data?.map((r) => r.role) || []);
-  };
-
   useEffect(() => {
-    // Check for hardcoded HR session first
-    const isHrAuth = localStorage.getItem("hr_auth") === "true";
-
-    if (isHrAuth) {
-      const mockUser = {
-        id: "hr-admin-id",
-        email: "komallarna06@gmail.com",
-        role: "authenticated",
-        app_metadata: {},
-        user_metadata: { full_name: "HR Admin" },
-        aud: "authenticated",
-        created_at: new Date().toISOString(),
-      } as User;
-
-      const mockSession = {
-        access_token: "mock-token",
-        refresh_token: "mock-refresh-token",
-        expires_in: 3600,
-        token_type: "bearer",
-        user: mockUser,
-      } as Session;
-
-      setSession(mockSession);
-      setUser(mockUser);
-      setRoles(["admin"]); // Mock admin role
-      setLoading(false);
-      return;
+    // Check local storage on mount
+    const storedUser = localStorage.getItem("app_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse stored user", e);
+        localStorage.removeItem("app_user");
+      }
     }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchRoles(session.user.id), 0);
-        } else {
-          setRoles([]);
-        }
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRoles(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    setLoading(false);
   }, []);
 
-  const signOut = async () => {
-    localStorage.removeItem("hr_auth");
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setRoles([]);
+  const signIn = async (email: string, role: "candidate" | "hr", fullName?: string) => {
+    // Simulate login
+    const newUser: User = {
+      id: crypto.randomUUID(), // specific ID not strictly needed for Sheets unless we track it
+      email,
+      user_metadata: {
+        full_name: fullName || email.split("@")[0],
+        role,
+      },
+    };
+
+    // For HR, we might want to hardcode the specific check here or in the UI.
+    // The UI handles the credential check, so here we just set the authenticated state.
+    if (role === 'hr') {
+      newUser.user_metadata = { ...newUser.user_metadata, full_name: "HR Admin" };
+    }
+
+    setUser(newUser);
+    localStorage.setItem("app_user", JSON.stringify(newUser));
   };
 
-  const hasRole = (role: AppRole) => roles.includes(role);
+  const signOut = async () => {
+    setUser(null);
+    localStorage.removeItem("app_user");
+    localStorage.removeItem("hr_auth"); // Cleanup old key if present
+  };
+
+  const isHr = user?.user_metadata?.role === "hr";
 
   return (
-    <AuthContext.Provider value={{ session, user, roles, loading, signOut, hasRole }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      signIn,
+      signOut,
+      isAuthenticated: !!user,
+      isHr
+    }}>
       {children}
     </AuthContext.Provider>
   );
