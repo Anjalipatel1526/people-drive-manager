@@ -80,75 +80,49 @@ const AuthPage = () => {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
-            <Card className="w-full max-w-md shadow-lg">
+            <Card className="w-full max-w-md shadow-lg border-primary/20">
                 <CardHeader className="text-center space-y-2">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                        <FileText className="h-7 w-7" />
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                        <LogIn className="h-7 w-7" />
                     </div>
-                    <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-                    <CardDescription>Manage your HR documents efficiently</CardDescription>
+                    <CardTitle className="text-2xl font-bold tracking-tight">HR Portal</CardTitle>
+                    <CardDescription>Sign in with your admin credentials</CardDescription>
                 </CardHeader>
 
-                <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); resetForm(); }} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                        <TabsTrigger value="candidate">Candidate</TabsTrigger>
-                        <TabsTrigger value="hr">HR Admin</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="candidate">
-                        <form onSubmit={handleCandidateAuth}>
-                            <CardContent className="space-y-4">
-                                {candidateMode === "signup" && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="fullName">Full Name</Label>
-                                        <Input id="fullName" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-                                    </div>
-                                )}
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input id="email" type="email" placeholder="candidate@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-3">
-                                <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? "Processing..." : (candidateMode === "signup" ? <><UserPlus className="mr-2 h-4 w-4" /> Sign Up</> : <><LogIn className="mr-2 h-4 w-4" /> Sign In</>)}
-                                </Button>
-
-                                <div className="text-sm text-center text-muted-foreground">
-                                    {candidateMode === "signup" ? (
-                                        <p>Already have an account? <span className="text-primary font-medium cursor-pointer hover:underline" onClick={() => setCandidateMode("login")}>Sign in</span></p>
-                                    ) : (
-                                        <p>Don't have an account? <span className="text-primary font-medium cursor-pointer hover:underline" onClick={() => setCandidateMode("signup")}>Sign up</span></p>
-                                    )}
-                                </div>
-                            </CardFooter>
-                        </form>
-                    </TabsContent>
-
-                    <TabsContent value="hr">
-                        <form onSubmit={handleHRLogin}>
-                            <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="hr-email">Work Email</Label>
-                                    <Input id="hr-email" type="email" placeholder="hr@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="hr-password">Password</Label>
-                                    <Input id="hr-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-3">
-                                <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? "Signing in..." : <><LogIn className="mr-2 h-4 w-4" /> HR Sign In</>}
-                                </Button>
-                            </CardFooter>
-                        </form>
-                    </TabsContent>
-                </Tabs>
+                <form onSubmit={handleHRLogin}>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="hr-email">Work Email</Label>
+                            <Input
+                                id="hr-email"
+                                type="email"
+                                placeholder="hr@company.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="hr-password">Password</Label>
+                            <Input
+                                id="hr-password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex flex-col gap-3">
+                        <Button type="submit" className="w-full" disabled={loading} size="lg">
+                            {loading ? "Signing in..." : "HR Sign In"}
+                        </Button>
+                        <Button variant="ghost" onClick={() => navigate("/")} className="text-xs text-muted-foreground hover:bg-transparent hover:text-primary transition-colors">
+                            Back to Application Form
+                        </Button>
+                    </CardFooter>
+                </form>
             </Card>
         </div>
     );

@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, FileText, Upload, X } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { googleSheets } from "@/lib/googleSheets";
 import { Progress } from "@/components/ui/progress";
 
@@ -25,10 +24,9 @@ const DOCUMENT_TYPES = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const CandidateForm = () => {
-  const { user } = useAuth();
-  // Pre-fill from user context if available
-  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
-  const [email, setEmail] = useState(user?.email || "");
+  // Always start with empty fields for public access
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
 
   const [phone, setPhone] = useState("");
   const [department, setDepartment] = useState("");
@@ -65,8 +63,8 @@ const CandidateForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      toast({ title: "Please sign in", description: "You must be signed in to submit.", variant: "destructive" });
+    if (!fullName || !email) {
+      toast({ title: "Name and Email required", description: "Please fill in your basic details.", variant: "destructive" });
       return;
     }
 
@@ -137,7 +135,7 @@ const CandidateForm = () => {
           <CardContent className="pt-10 pb-10 space-y-4">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
             <h2 className="text-2xl font-bold text-foreground">Submission Successful!</h2>
-            <p className="text-muted-foreground">Your documents have been submitted to Google Sheets.</p>
+            <p className="text-muted-foreground">Your documents have been submitted successfully.</p>
             <Button onClick={() => setSubmitted(false)} variant="outline">Submit Another Response</Button>
           </CardContent>
         </Card>
@@ -153,7 +151,6 @@ const CandidateForm = () => {
             <FileText className="h-7 w-7" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">Document Submission</h1>
-          <p className="mt-2 text-muted-foreground">Submit your documents via Google Sheets</p>
         </div>
 
         <Card className="shadow-lg">
@@ -246,6 +243,12 @@ const CandidateForm = () => {
             </CardContent>
           </form>
         </Card>
+
+        <div className="mt-8 text-center pb-10">
+          <p className="text-sm text-muted-foreground">
+            Are you an HR Admin? <a href="/login" className="text-primary font-medium hover:underline">HR Portal Login</a>
+          </p>
+        </div>
       </div>
     </div>
   );

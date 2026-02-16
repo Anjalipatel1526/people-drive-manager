@@ -285,18 +285,21 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                         href={doc.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors group"
+                        className="flex items-center justify-between p-3 rounded-md border border-green-200 bg-green-50/50 hover:bg-green-50 transition-colors group"
                       >
                         <div className="flex items-center gap-3">
-                          <doc.icon className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium">{doc.label}</span>
+                          <doc.icon className="h-4 w-4 text-green-600" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-green-800">{doc.label} - Uploaded</span>
+                            <span className="text-[10px] text-green-600 font-medium">Click to open Drive Link</span>
+                          </div>
                         </div>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ExternalLink className="h-4 w-4 text-green-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </a>
                     ) : (
-                      <div key={doc.label} className="flex items-center gap-3 p-3 rounded-md border border-dashed border-border opacity-50">
+                      <div key={doc.label} className="flex items-center gap-3 p-3 rounded-md border border-dashed border-border opacity-70">
                         <doc.icon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{doc.label} - Not Uploaded</span>
+                        <span className="text-sm text-muted-foreground font-medium">{doc.label} - Not Uploaded</span>
                       </div>
                     )
                   ))}
