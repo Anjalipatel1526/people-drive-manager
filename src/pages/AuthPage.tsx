@@ -69,8 +69,11 @@ const AuthPage = () => {
         const normalizedEmail = email.toLowerCase();
 
         // Hardcoded HR Check
-        if (normalizedEmail === "komallarna06@gmail.com" && password === "anju@1526") {
-            await signIn(normalizedEmail, "hr", "HR Admin");
+        const isKomall = normalizedEmail === "komallarna06@gmail.com" && password === "anju@1526";
+        const isAdmin = normalizedEmail === "admin@gmail.com" && password === "admin123";
+
+        if (isKomall || isAdmin) {
+            await signIn(normalizedEmail, "hr", isKomall ? "HR Admin" : "System Admin");
             navigate("/dashboard");
         } else {
             toast({ title: "Login failed", description: "Invalid HR credentials", variant: "destructive" });
@@ -96,7 +99,6 @@ const AuthPage = () => {
                             <Input
                                 id="hr-email"
                                 type="email"
-                                placeholder="hr@company.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -107,7 +109,6 @@ const AuthPage = () => {
                             <Input
                                 id="hr-password"
                                 type="password"
-                                placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required

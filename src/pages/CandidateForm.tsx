@@ -164,22 +164,22 @@ const CandidateForm = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name *</Label>
-                  <Input id="fullName" placeholder="Rahul Kumar" value={fullName} onChange={(e) => setFullName(e.target.value)} required maxLength={100} />
+                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required maxLength={100} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
-                  <Input id="email" type="email" placeholder="rahul@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number *</Label>
-                  <Input id="phone" placeholder="+91 98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required maxLength={20} />
+                  <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} required maxLength={20} />
                 </div>
                 <div className="space-y-2">
                   <Label>Department *</Label>
                   <Select value={department} onValueChange={(v) => setDepartment(v)}>
-                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {DEPARTMENTS.map((d) => (
                         <SelectItem key={d} value={d}>{d}</SelectItem>
@@ -190,7 +190,13 @@ const CandidateForm = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
-                <Textarea id="address" placeholder="Your address..." value={address} onChange={(e) => setAddress(e.target.value)} maxLength={500} />
+                <Textarea
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="min-h-[100px]"
+                  maxLength={500}
+                />
               </div>
 
               {/* File uploads */}

@@ -8,7 +8,7 @@ export interface CandidateData {
 }
 
 // User provided URL
-export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz_bZipr2L8jvBBlJ8kNv21nbiHltnxqCigs1h9LyfmXa04ZCMzvR9z7p_60aIWQcCz/exec";
+export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxIC-gFF6VkmNjrFZJAdpbvP-SDYLYe9VXj_95wkVYJ-VdeSiK8gXEoe_P3zEgrcDO2zQ/exec";
 
 export const googleSheets = {
     /**
@@ -59,7 +59,17 @@ export const googleSheets = {
         return this.sendRequest({
             action: "verify_candidate",
             data: { email }
-        });
+        }, false); // Allow reading response to see script errors
+    },
+
+    /**
+     * Sends remarks/feedback for a candidate and triggers email notification
+     */
+    async addRemarks(email: string, remarks: string) {
+        return this.sendRequest({
+            action: "add_remarks",
+            data: { email, remarks }
+        }, false); // Allow reading response to see script errors
     },
 
     /**
@@ -122,13 +132,13 @@ export const googleSheets = {
             try {
                 const result = JSON.parse(text);
                 if (result.result === "error") {
-                    throw new Error(result.error);
+                    throw new Error(result.error || "Unknown backend error");
                 }
                 return result;
             } catch (e: any) {
                 if (e.message && e.message.includes("Server returned invalid response")) throw e;
-                console.error("[GoogleSheets] Failed to parse JSON. Raw response:", text);
-                throw new Error("Invalid response format from Google Sheets script. Check console for details.");
+                console.error("[GoogleSheets] Raw response from script:", text);
+                throw new Error(`The script returned an invalid format. Raw message: ${text.substring(0, 100)}...`);
             }
         } catch (error) {
             console.error("Error communicating with Google Sheets:", error);

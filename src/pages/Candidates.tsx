@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +39,7 @@ interface Candidate {
   aadhaar?: string;
   pan?: string;
   passbook?: string;
+  remarks?: string;
 }
 
 interface CandidatesPageProps {
@@ -50,6 +52,7 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<string>(filterDepartment || "all");
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [remarksData, setRemarksData] = useState<{ email: string, remarksInput: string } | null>(null);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -72,6 +75,7 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
           aadhaar: app.aadhaar || "",
           pan: app.pan || "",
           passbook: app.passbook || "",
+          remarks: app.remarks || "",
         }));
       }
       throw new Error(response.error || "Failed to fetch data");
@@ -120,6 +124,18 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
     },
     onSuccess: () => {
       toast({ title: "Deleted", description: "Candidate application removed." });
+    },
+  });
+
+  const remarksMutation = useMutation({
+    mutationFn: ({ email, remarks }: { email: string, remarks: string }) => googleSheets.addRemarks(email, remarks),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      toast({ title: "Remarks Sent", description: "The candidate has been notified via email." });
+      setRemarksData(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to send remarks", description: err.message, variant: "destructive" });
     },
   });
 
@@ -226,6 +242,9 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button variant="ghost" size="icon" onClick={() => setRemarksData({ email: c.email, remarksInput: c.remarks || "" })} title="Add/Edit Remarks" className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                          <FileText className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setDeleteConfirmEmail(c.email)} className="text-destructive hover:text-destructive/80" title="Delete Application">
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -268,6 +287,12 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                 <label className="text-xs font-bold text-muted-foreground uppercase">Address</label>
                 <p className="text-sm font-medium">{selectedCandidate.address || "N/A"}</p>
               </div>
+              {selectedCandidate.remarks && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-amber-700">Current Remarks</label>
+                  <p className="text-sm text-amber-900 mt-1">{selectedCandidate.remarks}</p>
+                </div>
+              )}
 
               <div className="pt-4 space-y-3">
                 <label className="text-xs font-bold text-muted-foreground uppercase">Uploaded Documents</label>
@@ -333,6 +358,37 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!remarksData} onOpenChange={(open) => !open && setRemarksData(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Application Remarks</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p className="text-sm text-muted-foreground">
+              Provide feedback or request missing information from the candidate. This will be emailed to them directly.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase">Remarks for {remarksData?.email}</label>
+              <Textarea
+                value={remarksData?.remarksInput || ""}
+                onChange={(e) => setRemarksData(prev => prev ? { ...prev, remarksInput: e.target.value } : null)}
+                placeholder="e.g. Please re-upload a clear copy of your Aadhaar card."
+                className="min-h-[120px]"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setRemarksData(null)}>Cancel</Button>
+              <Button
+                onClick={() => remarksData && remarksMutation.mutate({ email: remarksData.email, remarks: remarksData.remarksInput })}
+                disabled={remarksMutation.isPending || !remarksData?.remarksInput.trim()}
+              >
+                {remarksMutation.isPending ? "Sending..." : "Send Remarks & Email"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

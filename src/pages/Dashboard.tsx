@@ -16,22 +16,10 @@ import {
     Pie,
 } from "recharts";
 
+const DEPARTMENTS = ["HR", "Tech", "Finance", "Marketing", "Operations"];
 const COLORS = ["#4954FA", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
-const DEFAULT_DEPARTMENTS = ["HR", "Tech", "Finance", "Marketing", "Operations"];
 
 const Dashboard = () => {
-    const { data: departments = DEFAULT_DEPARTMENTS } = useQuery({
-        queryKey: ["departments"],
-        queryFn: async () => {
-            const response = await googleSheets.getDepartments();
-            if (response.result === "success" && response.data) {
-                return response.data;
-            }
-            return DEFAULT_DEPARTMENTS;
-        },
-        staleTime: 10 * 60 * 1000,
-    });
-
     const { data: candidates = [], isLoading } = useQuery({
         queryKey: ["applications"],
         queryFn: async () => {
@@ -58,10 +46,10 @@ const Dashboard = () => {
         { label: "Total Talent", value: total, icon: Users, color: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-600" },
         { label: "Pending Review", value: pending, icon: Clock, color: "from-amber-500/10 to-amber-500/5", iconColor: "text-amber-600" },
         { label: "Verified Assets", value: verified, icon: CheckCircle, color: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-600" },
-        { label: "Active Sectors", value: departments.length, icon: Building2, color: "from-indigo-500/10 to-indigo-500/5", iconColor: "text-indigo-600" },
+        { label: "Active Sectors", value: DEPARTMENTS.length, icon: Building2, color: "from-indigo-500/10 to-indigo-500/5", iconColor: "text-indigo-600" },
     ];
 
-    const deptData = departments.map((dept: string) => ({
+    const deptData = DEPARTMENTS.map((dept) => ({
         name: dept,
         count: candidates.filter((c: any) => c.department === dept).length,
     }));
