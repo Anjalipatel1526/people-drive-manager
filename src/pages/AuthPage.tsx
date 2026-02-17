@@ -49,11 +49,15 @@ const AuthPage = () => {
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
             <Card className="w-full max-w-md shadow-lg border-primary/20">
                 <CardHeader className="text-center space-y-2">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                        <LogIn className="h-7 w-7" />
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center">
+                        <img
+                            src="/Gemini_Generated_Image_p5ko5pp5ko5pp5ko.png"
+                            alt="Logo"
+                            className="h-full w-full object-cover rounded-xl shadow-md"
+                        />
                     </div>
-                    <CardTitle className="text-2xl font-bold tracking-tight">HR Portal</CardTitle>
-                    <CardDescription>Sign in with your admin credentials</CardDescription>
+                    <CardTitle className="text-2xl font-bold tracking-tight">People Drive Manager</CardTitle>
+                    <CardDescription>HR Portal Admin Access</CardDescription>
                 </CardHeader>
 
                 <form onSubmit={handleHRLogin}>

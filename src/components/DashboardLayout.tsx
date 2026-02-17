@@ -32,11 +32,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       <div className="flex min-h-screen w-full">
         <Sidebar className="border-r border-sidebar-border">
           <SidebarContent>
-            <div className="flex items-center gap-2 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <FileText className="h-5 w-5" />
-              </div>
-              <span className="text-sm font-bold text-sidebar-foreground">HR DocManager</span>
+            <div className="flex items-center gap-3 p-4">
+              <img
+                src="/Gemini_Generated_Image_p5ko5pp5ko5pp5ko.png"
+                alt="Logo"
+                className="h-9 w-9 rounded-lg object-cover shadow-sm"
+              />
+              <span className="text-sm font-bold text-sidebar-foreground">People Drive Manager</span>
             </div>
 
             <SidebarGroup>

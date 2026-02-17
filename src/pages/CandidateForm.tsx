@@ -126,10 +126,14 @@ const CandidateForm = () => {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="mx-auto max-w-2xl">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <FileText className="h-7 w-7" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
+            <img
+              src="/Gemini_Generated_Image_p5ko5pp5ko5pp5ko.png"
+              alt="Logo"
+              className="h-full w-full object-cover rounded-2xl shadow-md border-2 border-primary/20"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Document Submission</h1>
+          <h1 className="text-3xl font-bold text-foreground">People Drive Manager</h1>
         </div>
 
         <Card className="shadow-lg">
