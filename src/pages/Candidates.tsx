@@ -377,14 +377,24 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                 className="min-h-[120px]"
               />
             </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setRemarksData(null)}>Cancel</Button>
-              <Button
-                onClick={() => remarksData && remarksMutation.mutate({ email: remarksData.email, remarks: remarksData.remarksInput })}
-                disabled={remarksMutation.isPending || !remarksData?.remarksInput.trim()}
-              >
-                {remarksMutation.isPending ? "Sending..." : "Send Remarks & Email"}
-              </Button>
+            <div className="flex justify-between items-center gap-3">
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={async () => {
+                try {
+                  const res = await googleSheets.testEmail();
+                  toast({ title: "System Test", description: res.message || "Test initiated." });
+                } catch (e: any) {
+                  toast({ title: "Test Failed", description: e.message, variant: "destructive" });
+                }
+              }}>Test System</Button>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setRemarksData(null)}>Cancel</Button>
+                <Button
+                  onClick={() => remarksData && remarksMutation.mutate({ email: remarksData.email, remarks: remarksData.remarksInput })}
+                  disabled={remarksMutation.isPending || !remarksData?.remarksInput.trim()}
+                >
+                  {remarksMutation.isPending ? "Sending..." : "Send Remarks & Email"}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

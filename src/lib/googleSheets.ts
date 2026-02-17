@@ -8,7 +8,7 @@ export interface CandidateData {
 }
 
 // User provided URL
-export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxIC-gFF6VkmNjrFZJAdpbvP-SDYLYe9VXj_95wkVYJ-VdeSiK8gXEoe_P3zEgrcDO2zQ/exec";
+export const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbwdrfCdKmzgf9v3p83K6e_CKOsQRMcYzW0hMwleKSsoOGefbIB_NtEqsQLqUtV82f_chg/exec";
 
 export const googleSheets = {
 
@@ -51,6 +51,15 @@ export const googleSheets = {
             action: "add_remarks",
             data: { email, remarks }
         }, false); // Allow reading response to see script errors
+    },
+
+    /**
+     * Tests the email notification system
+     */
+    async testEmail() {
+        return this.sendRequest({
+            action: "test_email"
+        }, false);
     },
 
     /**
