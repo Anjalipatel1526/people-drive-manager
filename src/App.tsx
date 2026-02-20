@@ -11,13 +11,29 @@ import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "@/pages/Dashboard";
 import Candidates from "@/pages/Candidates";
 import DashboardSettings from "@/pages/DashboardSettings";
-import Departments from "@/pages/Departments";
 import NotFound from "@/pages/NotFound";
 
-const queryClient = new QueryClient();
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+});
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <PersistQueryClientProvider
+    client={queryClient}
+    persistOptions={{ persister }}
+  >
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -31,7 +47,7 @@ const App = () => (
               element={<CandidateForm />}
             />
             <Route
-              path="/dashboard"
+              path="/admin"
               element={
                 <ProtectedRoute>
                   <DashboardLayout><Dashboard /></DashboardLayout>
@@ -39,7 +55,7 @@ const App = () => (
               }
             />
             <Route
-              path="/dashboard/candidates"
+              path="/admin/candidates"
               element={
                 <ProtectedRoute>
                   <DashboardLayout><Candidates /></DashboardLayout>
@@ -48,7 +64,7 @@ const App = () => (
             />
 
             <Route
-              path="/dashboard/pending"
+              path="/admin/pending"
               element={
                 <ProtectedRoute>
                   <DashboardLayout><Candidates filterStatus="Pending" /></DashboardLayout>
@@ -56,23 +72,15 @@ const App = () => (
               }
             />
             <Route
-              path="/dashboard/verified"
+              path="/admin/approved"
               element={
                 <ProtectedRoute>
-                  <DashboardLayout><Candidates filterStatus="Verified" /></DashboardLayout>
+                  <DashboardLayout><Candidates filterStatus="Approved" /></DashboardLayout>
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/dashboard/departments"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout><Departments /></DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/settings"
+              path="/admin/settings"
               element={
                 <ProtectedRoute>
                   <DashboardLayout><DashboardSettings /></DashboardLayout>
@@ -84,7 +92,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
-  </QueryClientProvider >
+  </PersistQueryClientProvider>
 );
 
 export default App;

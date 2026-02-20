@@ -14,6 +14,11 @@ export const candidateApi = {
         return response.data;
     },
 
+    getApplicationByRegId: async (regId) => {
+        const response = await api.get(`/applications/${regId}`);
+        return response.data;
+    },
+
     submitPhase2: async (formData) => {
         const response = await api.post('/phase2', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },

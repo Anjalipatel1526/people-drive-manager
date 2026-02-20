@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,55 +19,76 @@ import {
     Pie,
 } from "recharts";
 
-const DEPARTMENTS = [
+const TRACKS = [
     "Education",
     "Entertainment",
     "AI Agent and Automation",
     "Core AI/ML",
     "Big Data",
     "Mass Communication",
-    "Cutting Agents"
+    "Cutting Agents",
 ];
 
 const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 const Dashboard = () => {
-    const { data: candidates = [], isLoading } = useQuery({
-        queryKey: ["applications"],
-        queryFn: async () => {
-            return await candidateApi.getAllApplications();
-        },
-        staleTime: 1 * 60 * 1000,
+    const [cachedCandidates, setCachedCandidates] = useState<any[]>(() => {
+        try {
+            const saved = localStorage.getItem("codekar_candidates_cache");
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
     });
 
-    const total = candidates.length;
-    const individualCount = candidates.filter((c: any) => c.registrationType === "Individual").length;
-    const teamCount = candidates.filter((c: any) => c.registrationType === "Team").length;
+    const { data: candidates = cachedCandidates, isPending, isFetching } = useQuery({
+        queryKey: ["applications"],
+        queryFn: async () => {
+            const data = await candidateApi.getAllApplications();
+            localStorage.setItem("codekar_candidates_cache", JSON.stringify(data));
+            setCachedCandidates(data);
+            return data;
+        },
+        staleTime: 5 * 60 * 1000,
+        initialData: cachedCandidates.length > 0 ? cachedCandidates : undefined,
+    });
 
-    const p1Pending = candidates.filter((c: any) => c.status === "Pending").length;
-    const p2Completed = candidates.filter((c: any) => c.phase2?.isCompleted).length;
+    const displayData = candidates;
 
-    const statCards = [
-        { label: "Total Submissions", value: total, icon: Layers, color: "from-indigo-500/10 to-indigo-500/5", iconColor: "text-indigo-600", path: "/dashboard/candidates" },
-        { label: "Individual Apps", value: individualCount, icon: User, color: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-600", path: "/dashboard/candidates" },
-        { label: "Team Apps", value: teamCount, icon: Users, color: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-600", path: "/dashboard/candidates" },
-        { label: "Phase 1 Pending", value: p1Pending, icon: Clock, color: "from-amber-500/10 to-amber-500/5", iconColor: "text-amber-600", path: "/dashboard/candidates" },
-    ];
+    const stats = useMemo(() => {
+        const total = displayData.length;
+        const individualCount = displayData.filter((c: any) => c.registrationType === "Individual").length;
+        const teamCount = displayData.filter((c: any) => c.registrationType === "Team").length;
+        const p1Pending = displayData.filter((c: any) => c.status === "Pending").length;
+        const p2Completed = displayData.filter((c: any) => c.phase2?.isCompleted).length;
 
-    const deptData = DEPARTMENTS.map((dept) => ({
-        name: dept,
-        count: candidates.filter((c: any) => c.department === dept).length,
-    }));
+        return { total, individualCount, teamCount, p1Pending, p2Completed };
+    }, [displayData]);
 
-    const phaseData = [
-        { name: "Phase 2 Completed", value: p2Completed, color: "#10B981" },
-        { name: "Phase 1 Only", value: total - p2Completed, color: "#6366f1" },
-    ].filter(d => d.value > 0);
+    const statCards = useMemo(() => [
+        { label: "Total Submissions", value: stats.total, icon: Layers, color: "from-indigo-500/10 to-indigo-500/5", iconColor: "text-indigo-600", path: "/admin/candidates" },
+        { label: "Individual Apps", value: stats.individualCount, icon: User, color: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-600", path: "/admin/candidates" },
+        { label: "Team Apps", value: stats.teamCount, icon: Users, color: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-600", path: "/admin/candidates" },
+        { label: "Phase 1 Pending", value: stats.p1Pending, icon: Clock, color: "from-amber-500/10 to-amber-500/5", iconColor: "text-amber-600", path: "/admin/candidates" },
+    ], [stats]);
 
-    if (isLoading) {
+    const trackData = useMemo(() => TRACKS.map((track) => ({
+        name: track,
+        count: displayData.filter((c: any) => c.department === track).length,
+    })), [displayData]);
+
+    const phaseData = useMemo(() => [
+        { name: "Phase 2 Completed", value: stats.p2Completed, color: "#10B981" },
+        { name: "Phase 1 Only", value: stats.total - stats.p2Completed, color: "#6366f1" },
+    ].filter(d => d.value > 0), [stats]);
+
+    // Only show skeletons if we have absolutely no data EVER (even in cache)
+    if (isPending && displayData.length === 0) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-10 w-64" />
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-10 w-64" />
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
                 </div>
@@ -80,11 +102,19 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
-                <p className="text-slate-500 italic flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-emerald-500" /> HR Candidate System Overview • Phase 1 & 2 Analytics
-                </p>
+            <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
+                    <p className="text-slate-500 italic flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-emerald-500" /> Codekar Hackathon System Overview • Phase 1 & 2 Analytics
+                    </p>
+                </div>
+                {isFetching && (
+                    <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full animate-pulse border border-indigo-100">
+                        <Clock className="h-3 w-3 animate-spin" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Refreshing Data...</span>
+                    </div>
+                )}
             </div>
 
             {/* Stats Grid */}
@@ -109,16 +139,14 @@ const Dashboard = () => {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
                 {/* Department Distribution */}
                 <Card className="lg:col-span-4 border-none shadow-sm bg-white rounded-2xl">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <div className="space-y-1">
-                            <CardTitle className="text-xl font-bold">Department Distribution</CardTitle>
-                            <CardDescription>Candidates by category</CardDescription>
-                        </div>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-7">
+                        <CardTitle className="text-xl font-bold">Hackathon Track Distribution</CardTitle>
+                        <CardDescription>Candidates by category</CardDescription>
                         <BarChart3 className="h-5 w-5 text-slate-400" />
                     </CardHeader>
                     <CardContent className="h-[350px] pt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={deptData}>
+                            <BarChart data={trackData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                                 <XAxis
                                     dataKey="name"
@@ -141,8 +169,8 @@ const Dashboard = () => {
                                         fontSize: '14px'
                                     }}
                                 />
-                                <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={40}>
-                                    {deptData.map((_, index) => (
+                                <Bar dataKey="count" fill="currentColor" radius={[6, 6, 0, 0]} className="fill-indigo-600">
+                                    {trackData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Bar>
@@ -208,7 +236,7 @@ const Dashboard = () => {
                         <CardTitle className="text-xl font-bold">Recent Submissions</CardTitle>
                         <CardDescription>Latest candidates awaiting review.</CardDescription>
                     </div>
-                    <Link to="/dashboard/candidates" className="text-xs font-bold text-indigo-600 hover:underline">View All</Link>
+                    <Link to="/admin/candidates" className="text-xs font-bold text-indigo-600 hover:underline">View All</Link>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
@@ -216,7 +244,7 @@ const Dashboard = () => {
                             <thead className="bg-slate-50 text-[10px] uppercase tracking-widest font-black text-slate-500 border-y border-slate-100">
                                 <tr>
                                     <th className="px-6 py-3">ID & NAME</th>
-                                    <th className="px-6 py-3">DEPARTMENT</th>
+                                    <th className="px-6 py-3">TRACK</th>
                                     <th className="px-6 py-3">TYPE</th>
                                     <th className="px-6 py-3 text-right">ACTION</th>
                                 </tr>
@@ -240,7 +268,7 @@ const Dashboard = () => {
                                                 <Badge variant="outline" className="text-[10px] bg-slate-50">{c.registrationType}</Badge>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <Link to="/dashboard/candidates">
+                                                <Link to="/admin/candidates">
                                                     <button className="text-xs font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-all">
                                                         View
                                                     </button>

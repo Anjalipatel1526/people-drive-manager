@@ -16,12 +16,11 @@ import { LayoutDashboard, Users, Clock, CheckCircle, Settings, LogOut, FileText,
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "All Candidates", url: "/dashboard/candidates", icon: Users },
-  { title: "Pending", url: "/dashboard/pending", icon: Clock },
-  { title: "Verified", url: "/dashboard/verified", icon: CheckCircle },
-  { title: "Manage Departments", url: "/dashboard/departments", icon: Building2 },
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
+  { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  { title: "All Participants", url: "/admin/candidates", icon: Users },
+  { title: "Pending", url: "/admin/pending", icon: Clock },
+  { title: "Approved", url: "/admin/approved", icon: CheckCircle },
+  { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
@@ -38,7 +37,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 alt="Logo"
                 className="h-9 w-9 rounded-lg object-cover shadow-sm"
               />
-              <span className="text-sm font-bold text-sidebar-foreground">People Drive Manager</span>
+              <span className="text-sm font-bold text-sidebar-foreground uppercase tracking-tight">Codekar Hackathon</span>
             </div>
 
             <SidebarGroup>
@@ -50,7 +49,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                       <SidebarMenuButton asChild>
                         <NavLink
                           to={item.url}
-                          end={item.url === "/dashboard"}
+                          end={item.url === "/admin"}
                           className="text-sidebar-foreground hover:bg-sidebar-accent"
                           activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                         >
@@ -76,7 +75,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <main className="flex-1 overflow-auto">
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b border-border bg-card px-6">
             <SidebarTrigger />
-            <h2 className="text-lg font-semibold text-foreground">HR Dashboard</h2>
+            <h2 className="text-lg font-semibold text-foreground">Hackathon Dashboard</h2>
           </header>
           <div className="p-6">{children}</div>
         </main>

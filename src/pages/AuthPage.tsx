@@ -38,9 +38,9 @@ const AuthPage = () => {
 
         if (isKomall || isAdmin) {
             await signIn(normalizedEmail, "hr", isKomall ? "HR Admin" : "System Admin");
-            navigate("/dashboard");
+            navigate("/admin");
         } else {
-            toast({ title: "Login failed", description: "Invalid HR credentials", variant: "destructive" });
+            toast({ title: "Login failed", description: "Invalid Codekar credentials", variant: "destructive" });
         }
         setLoading(false);
     };
@@ -56,8 +56,8 @@ const AuthPage = () => {
                             className="h-full w-full object-cover rounded-xl shadow-md"
                         />
                     </div>
-                    <CardTitle className="text-2xl font-bold tracking-tight">People Drive Manager</CardTitle>
-                    <CardDescription>HR Portal Admin Access</CardDescription>
+                    <CardTitle className="text-2xl font-bold">Codekar Admin Login</CardTitle>
+                    <CardDescription>Secure Access for Hackathon Management</CardDescription>
                 </CardHeader>
 
                 <form onSubmit={handleHRLogin}>
@@ -85,7 +85,7 @@ const AuthPage = () => {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-3">
                         <Button type="submit" className="w-full" disabled={loading} size="lg">
-                            {loading ? "Signing in..." : "HR Sign In"}
+                            {loading ? "Signing in..." : "Codekar Sign In"}
                         </Button>
                         <Button variant="ghost" onClick={() => navigate("/")} className="text-xs text-muted-foreground hover:bg-transparent hover:text-primary transition-colors">
                             Back to Application Form

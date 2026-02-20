@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Eye, Search, Trash2, CheckCircle, FileText, Image as ImageIcon, ExternalLink, Github, FolderOpen, Users } from "lucide-react";
+import {
+  Users,
+  Search,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  User,
+  Github,
+  FileText,
+  FileArchive,
+  MoreVertical,
+  Trash2,
+  CheckCircle,
+  ShieldCheck,
+  Building2,
+  Download,
+  Eye,
+  FolderOpen
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -23,8 +43,9 @@ import { candidateApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
 
-const DEPARTMENTS = [
+const TRACKS = [
   "Education",
   "Entertainment",
   "AI Agent and Automation",
@@ -43,7 +64,7 @@ interface Candidate {
   _id: string;
   registrationId: string;
   registrationType: 'Individual' | 'Team';
-  department: string;
+  track: string;
   status: 'Pending' | 'Approved' | 'Rejected';
 
   // Individual
@@ -76,28 +97,41 @@ interface Candidate {
 
 interface CandidatesPageProps {
   filterStatus?: "Pending" | "Approved" | "Rejected";
-  filterDepartment?: string;
+  filterTrack?: string;
 }
 
-const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => {
+const Candidates = ({ filterStatus, filterTrack }: CandidatesPageProps) => {
   const [search, setSearch] = useState("");
-  const [deptFilter, setDeptFilter] = useState<string>(filterDepartment || "all");
+  const [trackFilter, setTrackFilter] = useState<string>(filterTrack || "All");
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: candidates = [], isLoading, refetch } = useQuery({
+  const [cachedCandidates, setCachedCandidates] = useState<Candidate[]>(() => {
+    const saved = localStorage.getItem("codekar_candidates_cache");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const { data: candidates = cachedCandidates, isPending, isFetching, refetch } = useQuery({
     queryKey: ["applications"],
     queryFn: async () => {
-      return await candidateApi.getAllApplications();
+      const data = await candidateApi.getAllApplications();
+      localStorage.setItem("codekar_candidates_cache", JSON.stringify(data));
+      setCachedCandidates(data);
+      return data;
     },
-    staleTime: 1 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    initialData: cachedCandidates.length > 0 ? cachedCandidates : undefined,
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string, status: string }) => candidateApi.updateStatus(id, status),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
+      // Update local cache immediately too
+      const updatedCandidates = candidates.map(c => c._id === data._id ? { ...c, status: data.status } : c);
+      localStorage.setItem("codekar_candidates_cache", JSON.stringify(updatedCandidates));
+      setCachedCandidates(updatedCandidates);
       toast({ title: "Success", description: "Status updated successfully." });
     },
     onError: (err: any) => {
@@ -105,15 +139,15 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
     }
   });
 
-  const filtered = candidates.filter((c: Candidate) => {
+  const filtered = useMemo(() => candidates.filter((c: Candidate) => {
     const name = c.registrationType === 'Individual' ? `${c.firstName} ${c.lastName}` : c.teamName || '';
     const email = (c.registrationType === 'Individual' ? c.email : c.teamLeaderEmail) || '';
 
     const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || email.toLowerCase().includes(search.toLowerCase()) || c.registrationId.toLowerCase().includes(search.toLowerCase());
-    const matchesDept = deptFilter === "all" || c.department === deptFilter;
+    const matchesTrack = trackFilter === "All" || c.track === trackFilter;
     const matchesStatus = !filterStatus || c.status === filterStatus;
-    return matchesSearch && matchesDept && matchesStatus;
-  });
+    return matchesSearch && matchesTrack && matchesStatus;
+  }), [candidates, search, trackFilter, filterStatus]);
 
   const TableSkeleton = () => (
     <>
@@ -140,8 +174,8 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
           <p className="text-slate-500">Manage candidate registrations and project submissions</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading} className="bg-white">
-            <Search className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="bg-white">
+            <Search className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} /> Refresh
           </Button>
           <Button variant="outline" size="sm" className="bg-white">
             <Download className="mr-2 h-4 w-4" /> Export
@@ -159,15 +193,20 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
             className="pl-9 h-11 rounded-lg border-slate-200"
           />
         </div>
-        <Select value={deptFilter} onValueChange={setDeptFilter}>
-          <SelectTrigger className="w-[200px] h-11 rounded-lg border-slate-200"><SelectValue placeholder="Department" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {DEPARTMENTS.map((d) => (
-              <SelectItem key={d} value={d}>{d}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex-1 min-w-[200px]">
+          <Label className="text-xs font-bold text-slate-400 mb-1.5 block uppercase tracking-wider">Filter by Track</Label>
+          <Select value={trackFilter} onValueChange={setTrackFilter}>
+            <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/50">
+              <SelectValue placeholder="All Tracks" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Tracks</SelectItem>
+              {TRACKS.map((track) => (
+                <SelectItem key={track} value={track}>{track}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card className="border-slate-200 shadow-sm overflow-hidden rounded-xl">
@@ -177,14 +216,14 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
               <TableRow>
                 <TableHead className="font-semibold text-slate-700">ID & Name</TableHead>
                 <TableHead className="font-semibold text-slate-700">Type</TableHead>
-                <TableHead className="font-semibold text-slate-700">Department</TableHead>
+                <TableHead className="font-semibold text-slate-700">Track</TableHead>
                 <TableHead className="font-semibold text-slate-700">Phase Status</TableHead>
                 <TableHead className="font-semibold text-slate-700">Status</TableHead>
                 <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {(isPending && candidates.length === 0) ? (
                 <TableSkeleton />
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center text-slate-500 py-12">No applications found.</TableCell></TableRow>
@@ -207,7 +246,7 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-medium text-slate-600 truncate max-w-[150px] inline-block">{c.department}</span>
+                      <span className="text-sm font-medium text-slate-600 truncate max-w-[150px] inline-block">{c.track}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -225,8 +264,8 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                         onValueChange={(v) => statusMutation.mutate({ id: c._id, status: v })}
                       >
                         <SelectTrigger className={`h-8 w-28 text-xs font-bold rounded-full border-none px-3 ${c.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                            c.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
-                              'bg-amber-100 text-amber-700'
+                          c.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
+                            'bg-amber-100 text-amber-700'
                           }`}>
                           <SelectValue />
                         </SelectTrigger>
@@ -261,7 +300,7 @@ const Candidates = ({ filterStatus, filterDepartment }: CandidatesPageProps) => 
                     <DialogTitle className="text-2xl font-bold">
                       {selectedCandidate.registrationType === 'Individual' ? `${selectedCandidate.firstName} ${selectedCandidate.lastName}` : selectedCandidate.teamName}
                     </DialogTitle>
-                    <p className="text-indigo-100 text-sm">{selectedCandidate.department}</p>
+                    <p className="text-indigo-100 text-sm">{selectedCandidate.track}</p>
                   </div>
                   <Badge className={selectedCandidate.status === 'Approved' ? 'bg-emerald-500' : selectedCandidate.status === 'Rejected' ? 'bg-rose-500' : 'bg-amber-500'}>
                     {selectedCandidate.status}
